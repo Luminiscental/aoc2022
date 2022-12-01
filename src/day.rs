@@ -31,10 +31,12 @@ impl error::Error for Error {}
 
 pub trait Day<'a> {
     const DAY: usize;
+    type Input;
+    type ProcessedInput;
 
-    fn parse(input: &'a str);
-    fn solve_part1() -> String;
-    fn solve_part2() -> String;
+    fn parse(input: &'a str) -> Self::Input;
+    fn solve_part1(input: Self::Input) -> (Self::ProcessedInput, String);
+    fn solve_part2(input: Self::ProcessedInput) -> String;
 
     fn get_input() -> Result<String, Error> {
         let input_path = format!("cache/day{}.in", Self::DAY);
@@ -47,7 +49,7 @@ pub trait Day<'a> {
             );
             let input = reqwest::blocking::Client::new()
                 .get(format!(
-                    "https://adventofcode.com/2021/day/{}/input",
+                    "https://adventofcode.com/2022/day/{}/input",
                     Self::DAY
                 ))
                 .header(COOKIE, cookie)
@@ -65,14 +67,14 @@ pub trait Day<'a> {
         println!("day{:02}:", Self::DAY);
 
         let start_time = Instant::now();
-        Self::parse(input);
+        let input = Self::parse(input);
         let parsed_time = Instant::now();
         println!(
             "  parsing: ... (elapsed {}ms)",
             1000.0 * (parsed_time - start_time).as_secs_f32()
         );
 
-        let part1_answer = Self::solve_part1();
+        let (processed_input, part1_answer) = Self::solve_part1(input);
         let part1_time = Instant::now();
         println!(
             "  part1: {} (elapsed {}ms)",
@@ -80,7 +82,7 @@ pub trait Day<'a> {
             1000.0 * (part1_time - parsed_time).as_secs_f32()
         );
 
-        let part2_answer = Self::solve_part2();
+        let part2_answer = Self::solve_part2(processed_input);
         let part2_time = Instant::now();
         println!(
             "  part2: {} (elapsed {}ms)",
