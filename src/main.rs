@@ -14,7 +14,7 @@ macro_rules! bench_day {
             #[cfg(not(debug_assertions))]
             #[cfg(test)]
             mod [<bench_day $day>] {
-                use crate::day::Day;
+                use $crate::day::Day;
                 use super::*;
                 use test::Bencher;
 

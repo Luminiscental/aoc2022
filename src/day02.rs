@@ -36,3 +36,26 @@ impl<'a> Day<'a> for Day02 {
             .to_string()
     }
 }
+
+#[cfg(test)]
+mod test_day02 {
+    use super::*;
+    use indoc::indoc;
+
+    const EXAMPLE: &str = indoc! {"
+        A Y
+        B X
+        C Z
+    "};
+
+    #[test]
+    fn test_day02_examples() {
+        let input = Day02::parse(EXAMPLE);
+        let (input, part1) = Day02::solve_part1(input);
+        let part2 = Day02::solve_part2(input);
+        assert_eq!(part1, "15");
+        assert_eq!(part2, "12");
+    }
+}
+
+bench_day!(02);

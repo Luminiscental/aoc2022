@@ -26,3 +26,37 @@ impl<'a> Day<'a> for Day01 {
         totals.into_iter().take(3).sum::<u32>().to_string()
     }
 }
+
+#[cfg(test)]
+mod test_day01 {
+    use super::*;
+    use indoc::indoc;
+
+    const EXAMPLE: &str = indoc! {"
+        1000
+        2000
+        3000
+
+        4000
+
+        5000
+        6000
+
+        7000
+        8000
+        9000
+
+        10000
+    "};
+
+    #[test]
+    fn test_day01_examples() {
+        let input = Day01::parse(EXAMPLE);
+        let (input, part1) = Day01::solve_part1(input);
+        let part2 = Day01::solve_part2(input);
+        assert_eq!(part1, "24000");
+        assert_eq!(part2, "45000");
+    }
+}
+
+bench_day!(01);

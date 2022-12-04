@@ -45,3 +45,29 @@ impl<'a> Day<'a> for Day03 {
             .to_string()
     }
 }
+
+#[cfg(test)]
+mod test_day03 {
+    use super::*;
+    use indoc::indoc;
+
+    const EXAMPLE: &str = indoc! {"
+        vJrwpWtwJgWrhcsFMMfFFhFp
+        jqHRNqRjqzjGDLGLrsFMfFZSrLrFZsSL
+        PmmdzqPrVvPwwTWBwg
+        wMqvLMZHhHMvwLHjbvcjnnSBnvTQFn
+        ttgJtRGJQctTZtZT
+        CrZsJsPPZsGzwwsLwLmpwMDw
+    "};
+
+    #[test]
+    fn test_day03_examples() {
+        let input = Day03::parse(EXAMPLE);
+        let (input, part1) = Day03::solve_part1(input);
+        let part2 = Day03::solve_part2(input);
+        assert_eq!(part1, "157");
+        assert_eq!(part2, "70");
+    }
+}
+
+bench_day!(03);
