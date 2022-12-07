@@ -32,16 +32,15 @@ impl<'a> Day<'a> for Day07 {
         let mut cwd = &mut root;
         for command in input[9..].split("\n$ ") {
             if command.starts_with('c') {
-                let target = command[3..].trim();
-                if target == ".." {
+                if &command[3..] == ".." {
                     stack.pop();
                     cwd = &mut root;
                     for d in stack.iter() {
                         cwd = cwd.subdirectories.get_mut(d).unwrap();
                     }
                 } else {
-                    stack.push(target);
-                    cwd = cwd.subdirectories.get_mut(target).unwrap();
+                    stack.push(&command[3..]);
+                    cwd = cwd.subdirectories.get_mut(&command[3..]).unwrap();
                 }
             } else {
                 for entry in command[3..].lines() {
