@@ -1,6 +1,7 @@
 #![feature(test)]
 
 mod day;
+mod util;
 
 extern crate test;
 

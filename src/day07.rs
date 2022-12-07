@@ -1,24 +1,11 @@
-use crate::day::Day;
+use crate::{
+    day::Day,
+    util::{Tree, TreeZipper},
+};
 
 use std::collections::HashMap;
 
-#[derive(Default)]
-pub struct Directory<'a> {
-    files: HashMap<&'a str, usize>,
-    subdirectories: HashMap<&'a str, Directory<'a>>,
-}
-
-impl<'a> Directory<'a> {
-    fn for_each_size<F: FnMut(usize)>(&self, f: &mut F) -> usize {
-        let mut size = 0;
-        for dir in self.subdirectories.values() {
-            size += dir.for_each_size(f);
-        }
-        size += self.files.values().sum::<usize>();
-        f(size);
-        size
-    }
-}
+type Directory<'a> = Tree<&'a str, HashMap<&'a str, usize>>;
 
 pub struct Day07;
 
@@ -28,37 +15,28 @@ impl<'a> Day<'a> for Day07 {
     type ProcessedInput = Vec<usize>;
 
     fn parse(input: &'a str) -> Self::Input {
-        let (mut root, mut stack) = (Directory::default(), Vec::default());
-        let mut cwd = &mut root;
-        for command in input[9..].split("\n$ ") {
-            if command.starts_with('c') {
-                if &command[3..] == ".." {
-                    stack.pop();
-                    cwd = &mut root;
-                    for d in stack.iter() {
-                        cwd = cwd.subdirectories.get_mut(d).unwrap();
-                    }
-                } else {
-                    stack.push(&command[3..]);
-                    cwd = cwd.subdirectories.get_mut(&command[3..]).unwrap();
+        let mut cwd = TreeZipper::new(Directory::default());
+        for line in input.lines() {
+            if line.starts_with("$ c") {
+                match &line[5..] {
+                    ".." => cwd.pop(),
+                    dir => cwd.push(dir),
                 }
-            } else {
-                for entry in command[3..].lines() {
-                    let (meta, name) = entry.split_once(' ').unwrap();
-                    if meta == "dir" {
-                        cwd.subdirectories.insert(name, Directory::default());
-                    } else {
-                        cwd.files.insert(name, meta.parse().unwrap());
-                    }
-                }
+            } else if line.starts_with(|c: char| c.is_ascii_digit()) {
+                let (size, name) = line.split_once(' ').unwrap();
+                cwd.cursor.value.insert(name, size.parse().unwrap());
             }
         }
-        root
+        cwd.root()
     }
 
     fn solve_part1(file_system: Self::Input) -> (Self::ProcessedInput, String) {
         let mut sizes = Vec::new();
-        file_system.for_each_size(&mut |s| sizes.push(s));
+        file_system.fold(0, &mut |n, m| n + m, &mut |s, fs| {
+            let size = s + fs.values().sum::<usize>();
+            sizes.push(size);
+            size
+        });
         let ans = sizes
             .iter()
             .filter(|&&s| s <= 100000)
