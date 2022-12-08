@@ -3,9 +3,7 @@ use crate::{
     util::{Tree, TreeZipper},
 };
 
-use std::collections::HashMap;
-
-type Directory<'a> = Tree<&'a str, HashMap<&'a str, usize>>;
+type Directory<'a> = Tree<&'a str, usize>;
 
 pub struct Day07;
 
@@ -23,8 +21,7 @@ impl<'a> Day<'a> for Day07 {
                     dir => cwd.push(dir),
                 }
             } else if line.starts_with(|c: char| c.is_ascii_digit()) {
-                let (size, name) = line.split_once(' ').unwrap();
-                cwd.cursor.value.insert(name, size.parse().unwrap());
+                cwd.cursor.value += line.split_once(' ').unwrap().0.parse::<usize>().unwrap();
             }
         }
         cwd.root()
@@ -33,9 +30,8 @@ impl<'a> Day<'a> for Day07 {
     fn solve_part1(file_system: Self::Input) -> (Self::ProcessedInput, String) {
         let mut sizes = Vec::new();
         file_system.fold(0, &mut |n, m| n + m, &mut |s, fs| {
-            let size = s + fs.values().sum::<usize>();
-            sizes.push(size);
-            size
+            sizes.push(s + fs);
+            s + fs
         });
         let ans = sizes
             .iter()
