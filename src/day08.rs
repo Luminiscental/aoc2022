@@ -3,28 +3,28 @@ use std::collections::HashSet;
 
 use crate::day::Day;
 
-fn view_ray<I>(sight: I, grid: &[Vec<u32>], visible: &mut HashSet<(usize, usize)>)
+fn view_ray<I>(sight: I, grid: &[u32], visible: &mut HashSet<usize>)
 where
-    I: Iterator<Item = (usize, usize)>,
+    I: Iterator<Item = usize>,
 {
     let mut hidden = -1i32;
-    for (i, j) in sight {
-        let height = grid[i][j];
+    for i in sight {
+        let height = grid[i];
         if height as i32 > hidden {
-            visible.insert((i, j));
+            visible.insert(i);
             hidden = height as i32;
         }
     }
 }
 
-fn count_ray<I>(sight: I, height: u32, grid: &[Vec<u32>]) -> usize
+fn count_ray<I>(sight: I, height: u32, grid: &[u32]) -> usize
 where
-    I: Iterator<Item = (usize, usize)>,
+    I: Iterator<Item = usize>,
 {
     let mut count = 0;
-    for (i, j) in sight {
+    for i in sight {
         count += 1;
-        if grid[i][j] >= height {
+        if grid[i] >= height {
             break;
         }
     }
@@ -35,40 +35,42 @@ pub struct Day08;
 
 impl<'a> Day<'a> for Day08 {
     const DAY: usize = 8;
-    type Input = Vec<Vec<u32>>;
-    type ProcessedInput = Vec<Vec<u32>>;
+    type Input = (usize, usize, Vec<u32>);
+    type ProcessedInput = (usize, usize, Vec<u32>);
 
     fn parse(input: &'a str) -> Self::Input {
-        input
+        let width = input.trim().lines().next().unwrap().len();
+        let grid = input
             .trim()
             .lines()
-            .map(|line| line.chars().map(|c| c.to_digit(10).unwrap()).collect())
-            .collect()
+            .flat_map(str::chars)
+            .map(|c| c.to_digit(10).unwrap())
+            .collect::<Vec<_>>();
+        let height = grid.len() / width;
+        (width, height, grid)
     }
 
-    fn solve_part1(input: Self::Input) -> (Self::ProcessedInput, String) {
+    fn solve_part1((w, h, grid): Self::Input) -> (Self::ProcessedInput, String) {
         let mut visible = HashSet::new();
-        let (width, height) = (input[0].len(), input.len());
-        for j in 0..width {
-            view_ray((0..height).map(|i| (i, j)), &input, &mut visible);
-            view_ray((0..height).rev().map(|i| (i, j)), &input, &mut visible);
+        for j in 0..w {
+            view_ray((0..h).map(|i| j + w * i), &grid, &mut visible);
+            view_ray((0..h).rev().map(|i| j + w * i), &grid, &mut visible);
         }
-        for i in 0..height {
-            view_ray((0..width).map(|j| (i, j)), &input, &mut visible);
-            view_ray((0..width).rev().map(|j| (i, j)), &input, &mut visible);
+        for i in 0..h {
+            view_ray((0..w).map(|j| j + w * i), &grid, &mut visible);
+            view_ray((0..w).rev().map(|j| j + w * i), &grid, &mut visible);
         }
-        (input, visible.len().to_string())
+        ((w, h, grid), visible.len().to_string())
     }
 
-    fn solve_part2(input: Self::ProcessedInput) -> String {
-        let (width, height) = (input[0].len(), input.len());
+    fn solve_part2((width, height, grid): Self::ProcessedInput) -> String {
         iproduct!(1..width - 1, 1..height - 1)
             .map(|(i, j)| {
-                let h = input[i][j];
-                count_ray((0..j).rev().map(|k| (i, k)), h, &input)
-                    * count_ray((j + 1..width).map(|k| (i, k)), h, &input)
-                    * count_ray((0..i).rev().map(|k| (k, j)), h, &input)
-                    * count_ray((i + 1..height).map(|k| (k, j)), h, &input)
+                let h = grid[j + width * i];
+                count_ray((0..j).rev().map(|k| k + width * i), h, &grid)
+                    * count_ray((j + 1..width).map(|k| k + width * i), h, &grid)
+                    * count_ray((0..i).rev().map(|k| j + width * k), h, &grid)
+                    * count_ray((i + 1..height).map(|k| j + width * k), h, &grid)
             })
             .max()
             .unwrap()
