@@ -98,3 +98,5 @@ mod test_day08 {
         assert_eq!(part2, "8");
     }
 }
+
+bench_day!(08);
