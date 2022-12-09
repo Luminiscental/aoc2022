@@ -1,80 +1,47 @@
-use itertools::iproduct;
-use std::collections::HashSet;
-
 use crate::day::Day;
 
-fn view_ray<I>(sight: I, grid: &[u32], visible: &mut HashSet<usize>)
-where
-    I: Iterator<Item = usize>,
-{
-    let mut hidden = -1i32;
-    for i in sight {
-        let height = grid[i];
-        if height as i32 > hidden {
-            visible.insert(i);
-            hidden = height as i32;
-        }
+fn scan<I: Iterator<Item = usize>>(ray: I, grid: &[u32], vis_score: &mut [(bool, u32)]) {
+    let mut seen = [None; 10];
+    for (n, i) in ray.enumerate() {
+        let h = grid[i] as usize;
+        vis_score[i].0 |= seen[h].is_none();
+        vis_score[i].1 *= (n - seen[h].unwrap_or(0)) as u32;
+        seen.iter_mut().take(h + 1).for_each(|s| *s = Some(n));
     }
-}
-
-fn count_ray<I>(sight: I, height: u32, grid: &[u32]) -> usize
-where
-    I: Iterator<Item = usize>,
-{
-    let mut count = 0;
-    for i in sight {
-        count += 1;
-        if grid[i] >= height {
-            break;
-        }
-    }
-    count
 }
 
 pub struct Day08;
 
 impl<'a> Day<'a> for Day08 {
     const DAY: usize = 8;
-    type Input = (usize, usize, Vec<u32>);
-    type ProcessedInput = (usize, usize, Vec<u32>);
+    type Input = (usize, usize, Vec<u32>); // (width, height, grid)
+    type ProcessedInput = Vec<(bool, u32)>; // [(visible, score)]
 
     fn parse(input: &'a str) -> Self::Input {
-        let width = input.trim().lines().next().unwrap().len();
-        let grid = input
-            .trim()
-            .lines()
-            .flat_map(str::chars)
-            .map(|c| c.to_digit(10).unwrap())
-            .collect::<Vec<_>>();
-        let height = grid.len() / width;
+        let width = input.find(|c: char| c.is_whitespace()).unwrap();
+        let grid = input.chars().filter_map(|c| c.to_digit(10)).collect();
+        let height = Vec::len(&grid) / width;
         (width, height, grid)
     }
 
-    fn solve_part1((w, h, grid): Self::Input) -> (Self::ProcessedInput, String) {
-        let mut visible = HashSet::new();
-        for j in 0..w {
-            view_ray((0..h).map(|i| j + w * i), &grid, &mut visible);
-            view_ray((0..h).rev().map(|i| j + w * i), &grid, &mut visible);
+    fn solve_part1((width, height, grid): Self::Input) -> (Self::ProcessedInput, String) {
+        let mut vis_score = vec![(false, 1); grid.len()];
+        for j in 0..width {
+            let ran = (0..height).map(|i| j + width * i);
+            scan(ran.clone().rev(), &grid, &mut vis_score);
+            scan(ran, &grid, &mut vis_score);
         }
-        for i in 0..h {
-            view_ray((0..w).map(|j| j + w * i), &grid, &mut visible);
-            view_ray((0..w).rev().map(|j| j + w * i), &grid, &mut visible);
+        for i in 0..height {
+            let ran = (0..width).map(|j| j + width * i);
+            scan(ran.clone().rev(), &grid, &mut vis_score);
+            scan(ran, &grid, &mut vis_score);
         }
-        ((w, h, grid), visible.len().to_string())
+        let visible = vis_score.iter().filter(|&&(v, _)| v).count();
+        (vis_score, visible.to_string())
     }
 
-    fn solve_part2((width, height, grid): Self::ProcessedInput) -> String {
-        iproduct!(1..width - 1, 1..height - 1)
-            .map(|(i, j)| {
-                let h = grid[j + width * i];
-                count_ray((0..j).rev().map(|k| k + width * i), h, &grid)
-                    * count_ray((j + 1..width).map(|k| k + width * i), h, &grid)
-                    * count_ray((0..i).rev().map(|k| j + width * k), h, &grid)
-                    * count_ray((i + 1..height).map(|k| j + width * k), h, &grid)
-            })
-            .max()
-            .unwrap()
-            .to_string()
+    fn solve_part2(vis_score: Self::ProcessedInput) -> String {
+        vis_score.iter().map(|&(_, s)| s).max().unwrap().to_string()
     }
 }
 
