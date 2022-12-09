@@ -2,33 +2,21 @@ use std::collections::HashSet;
 
 use crate::day::Day;
 
-fn pull(disp: (i32, i32)) -> (i32, i32) {
-    let signs = (disp.0.signum(), disp.1.signum());
-    if signs.0 * disp.0 == 2 || signs.1 * disp.1 == 2 {
-        signs
-    } else {
-        (0, 0)
-    }
-}
-
-fn step_rope(head_step: (i32, i32), rope: &mut [(i32, i32)]) {
-    rope[0].0 += head_step.0;
-    rope[0].1 += head_step.1;
-    for i in 1..rope.len() {
-        let disp = (rope[i - 1].0 - rope[i].0, rope[i - 1].1 - rope[i].1);
-        let knot_step = pull(disp);
-        rope[i].0 += knot_step.0;
-        rope[i].1 += knot_step.1;
-    }
-}
-
 fn tail_visits<const N: usize>(moves: &[((i32, i32), u32)]) -> usize {
     let mut rope = [(0, 0); N];
     let mut tail_locs = HashSet::new();
-    tail_locs.insert(rope[N - 1]);
     for (step, count) in moves.iter().copied() {
         for _ in 0..count {
-            step_rope(step, &mut rope);
+            rope[0].0 += step.0;
+            rope[0].1 += step.1;
+            for i in 1..N {
+                let disp = (rope[i - 1].0 - rope[i].0, rope[i - 1].1 - rope[i].1);
+                let signs = (disp.0.signum(), disp.1.signum());
+                if signs.0 * disp.0 == 2 || signs.1 * disp.1 == 2 {
+                    rope[i].0 += signs.0;
+                    rope[i].1 += signs.1;
+                }
+            }
             tail_locs.insert(rope[N - 1]);
         }
     }
