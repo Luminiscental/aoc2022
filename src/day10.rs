@@ -1,25 +1,4 @@
-use crate::day::Day;
-
-fn decode(pixel: impl Fn(usize, usize) -> bool) -> char {
-    let pixel01 = |x, y| pixel(x, y) as i32;
-    match (pixel01(0, 0), pixel01(3, 0), pixel01(0, 5), pixel01(3, 5)) {
-        (0, 0, 0, 0) => 'C',
-        (0, 0, 0, 1) => 'G',
-        (0, 0, 1, 1) => 'A',
-        (0, 1, 0, 0) => 'J',
-        (1, 0, 1, 0) if pixel(1, 5) => 'B',
-        (1, 0, 1, 0) => 'P',
-        (1, 0, 1, 1) if pixel(1, 0) => 'R',
-        (1, 0, 1, 1) => 'L',
-        (1, 1, 0, 0) => 'U',
-        (1, 1, 1, 0) => 'F',
-        (1, 1, 1, 1) if pixel(3, 4) => 'H',
-        (1, 1, 1, 1) if pixel(1, 3) => 'Z',
-        (1, 1, 1, 1) if pixel(1, 0) => 'E',
-        (1, 1, 1, 1) => 'K',
-        _ => panic!("unknown character"),
-    }
-}
+use crate::{day::Day, util};
 
 fn run<F: FnMut(i32, i32) -> bool>(mut program: &[Option<i32>], mut body: F) {
     let mut queue = None;
@@ -75,7 +54,9 @@ impl<'a> Day<'a> for Day10 {
             }
             true
         });
-        (0..8).map(|i| decode(|x, y| image[y][5 * i + x])).collect()
+        (0..8)
+            .map(|i| util::decode4x6char(|x, y| image[y][5 * i + x]).unwrap())
+            .collect()
     }
 }
 

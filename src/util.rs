@@ -1,5 +1,26 @@
 use std::{collections::HashMap, hash::Hash};
 
+pub fn decode4x6char<F: Fn(usize, usize) -> bool>(pixel: F) -> Option<char> {
+    let pixel01 = |x, y| pixel(x, y) as i32;
+    match (pixel01(0, 0), pixel01(3, 0), pixel01(0, 5), pixel01(3, 5)) {
+        (0, 0, 0, 0) => Some('C'),
+        (0, 0, 0, 1) => Some('G'),
+        (0, 0, 1, 1) => Some('A'),
+        (0, 1, 0, 0) => Some('J'),
+        (1, 0, 1, 0) if pixel(1, 5) => Some('B'),
+        (1, 0, 1, 0) => Some('P'),
+        (1, 0, 1, 1) if pixel(1, 0) => Some('R'),
+        (1, 0, 1, 1) => Some('L'),
+        (1, 1, 0, 0) => Some('U'),
+        (1, 1, 1, 0) => Some('F'),
+        (1, 1, 1, 1) if pixel(3, 4) => Some('H'),
+        (1, 1, 1, 1) if pixel(1, 3) => Some('Z'),
+        (1, 1, 1, 1) if pixel(1, 0) => Some('E'),
+        (1, 1, 1, 1) => Some('K'),
+        _ => None,
+    }
+}
+
 pub struct Tree<K, V> {
     pub value: V,
     pub children: HashMap<K, Tree<K, V>>,
