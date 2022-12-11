@@ -43,8 +43,8 @@ fn monkey_business(monkeys: &mut [Monkey], rounds: usize, manageable: bool) -> u
     for _ in 0..rounds {
         for i in 0..monkeys.len() {
             for item in std::mem::take(&mut monkeys[i].queue).into_iter() {
-                let item = monkeys[i].operation.apply(item) % global_base;
-                let item = if manageable { item / 3 } else { item };
+                let item = monkeys[i].operation.apply(item);
+                let item = if manageable { item / 3 } else { item % global_base };
                 let target = if item % monkeys[i].test_base == 0 {
                     monkeys[i].divisible_target
                 } else {
