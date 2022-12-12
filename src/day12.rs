@@ -1,6 +1,4 @@
-use std::collections::{HashSet, VecDeque};
-
-use crate::day::Day;
+use crate::{day::Day, util};
 
 pub struct Input {
     heights: Vec<i32>,
@@ -10,40 +8,22 @@ pub struct Input {
     end: (usize, usize),
 }
 
-fn steps_from(start: (usize, usize), input: &Input) -> Option<usize> {
-    let mut queue = VecDeque::new();
-    let mut visited = HashSet::new();
-    queue.push_front((start, 0));
-    visited.insert(start);
-    while let Some((pos, steps)) = queue.pop_back() {
-        let mut neighbs = Vec::new();
-        if pos.0 > 0 {
-            neighbs.push((pos.0 - 1, pos.1));
-        }
-        if pos.0 < input.width - 1 {
-            neighbs.push((pos.0 + 1, pos.1));
-        }
-        if pos.1 > 0 {
-            neighbs.push((pos.0, pos.1 - 1));
-        }
-        if pos.1 < input.height - 1 {
-            neighbs.push((pos.0, pos.1 + 1));
-        }
-        for new_pos in neighbs.into_iter() {
-            if input.heights[new_pos.0 + input.width * new_pos.1]
-                - input.heights[pos.0 + input.width * pos.1]
-                <= 1
-                && !visited.contains(&new_pos)
-            {
-                if new_pos == input.end {
-                    return Some(steps + 1);
-                }
-                queue.push_front((new_pos, steps + 1));
-                visited.insert(new_pos);
-            }
-        }
-    }
-    None
+fn neighbours<F: Fn(i32, i32) -> bool>(
+    pos: (usize, usize),
+    input: &Input,
+    filter: F,
+) -> impl Iterator<Item = (usize, usize)> {
+    let idx = pos.0 + input.width * pos.1;
+    let old_height = input.heights[idx];
+    [
+        (pos.0 > 0).then(|| (pos.0 - 1, pos.1, input.heights[idx - 1])),
+        (pos.0 < input.width - 1).then(|| (pos.0 + 1, pos.1, input.heights[idx + 1])),
+        (pos.1 > 0).then(|| (pos.0, pos.1 - 1, input.heights[idx - input.width])),
+        (pos.1 < input.height - 1).then(|| (pos.0, pos.1 + 1, input.heights[idx + input.width])),
+    ]
+    .into_iter()
+    .flatten()
+    .filter_map(move |(p0, p1, h)| filter(old_height, h).then_some((p0, p1)))
 }
 
 pub struct Day12;
@@ -84,25 +64,24 @@ impl<'a> Day<'a> for Day12 {
     }
 
     fn solve_part1(input: Self::Input) -> (Self::ProcessedInput, String) {
-        let ans = steps_from(input.start, &input).unwrap().to_string();
+        let ans = util::bfs(
+            input.start,
+            |pos| neighbours(pos, &input, |old_h, new_h| new_h - old_h <= 1),
+            |pos| pos == input.end,
+        )
+        .unwrap()
+        .to_string();
         (input, ans)
     }
 
     fn solve_part2(input: Self::ProcessedInput) -> String {
-        let mut starts = Vec::new();
-        for i in 0..input.height {
-            for j in 0..input.width {
-                if input.heights[j + input.width * i] == 0 {
-                    starts.push((j, i));
-                }
-            }
-        }
-        starts
-            .into_iter()
-            .filter_map(|s| steps_from(s, &input))
-            .min()
-            .unwrap()
-            .to_string()
+        util::bfs(
+            input.end,
+            |pos| neighbours(pos, &input, |old_h, new_h| old_h - new_h <= 1),
+            |pos| input.heights[pos.0 + input.width * pos.1] == 0,
+        )
+        .unwrap()
+        .to_string()
     }
 }
 

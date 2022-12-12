@@ -1,4 +1,31 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    hash::Hash,
+};
+
+pub fn bfs<N, F, G, I>(root: N, adjacents: F, goal: G) -> Option<usize>
+where
+    N: Copy + Eq + Hash,
+    F: Fn(N) -> I,
+    I: Iterator<Item = N>,
+    G: Fn(N) -> bool,
+{
+    let mut queue = VecDeque::new();
+    let mut seen = HashSet::new();
+    queue.push_front((root, 0));
+    seen.insert(root);
+    while let Some((node, steps)) = queue.pop_back() {
+        for n in adjacents(node) {
+            if goal(n) {
+                return Some(steps + 1);
+            } else if !seen.contains(&n) {
+                queue.push_front((n, steps + 1));
+                seen.insert(n);
+            }
+        }
+    }
+    None
+}
 
 pub fn decode4x6char<F: Fn(usize, usize) -> bool>(pixel: F) -> Option<char> {
     let pixel01 = |x, y| pixel(x, y) as i32;
