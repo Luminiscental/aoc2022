@@ -76,18 +76,17 @@ impl<'a> Day<'a> for Day13 {
     }
 
     fn solve_part2(input: Self::ProcessedInput) -> String {
-        let dividers = [Packet::Num(2), Packet::Num(6)];
-        let mut packets = input
+        let mut dividers = [(Packet::Num(2), 1), (Packet::Num(6), 2)];
+        for packet in input.into_iter().flat_map(|a| a.into_iter()) {
+            for (divider, count) in dividers.iter_mut() {
+                if cmp(&packet, divider) == Ordering::Less {
+                    *count += 1;
+                }
+            }
+        }
+        dividers
             .into_iter()
-            .flat_map(|ar| ar.into_iter())
-            .map(|p| (p, false))
-            .chain(dividers.into_iter().map(|d| (d, true)))
-            .collect::<Vec<_>>();
-        packets.sort_by(|l, r| cmp(&l.0, &r.0));
-        packets
-            .into_iter()
-            .enumerate()
-            .filter_map(|(i, t)| t.1.then_some(i + 1))
+            .map(|(_, count)| count)
             .product::<usize>()
             .to_string()
     }
