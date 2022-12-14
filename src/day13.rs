@@ -83,7 +83,7 @@ impl<'a> Day<'a> for Day13 {
             .map(|p| (p, false))
             .chain(dividers.into_iter().map(|d| (d, true)))
             .collect::<Vec<_>>();
-        packets.sort_unstable_by(|l, r| cmp(&l.0, &r.0));
+        packets.sort_by(|l, r| cmp(&l.0, &r.0));
         packets
             .into_iter()
             .enumerate()
