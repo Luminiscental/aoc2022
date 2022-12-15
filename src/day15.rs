@@ -84,11 +84,8 @@ pub struct Sensor {
 
 impl Sensor {
     fn new(at: (i32, i32), beacon: (i32, i32)) -> Self {
-        Self {
-            at,
-            beacon,
-            radius: (at.0.abs_diff(beacon.0) + at.1.abs_diff(beacon.1)) as i32,
-        }
+        let radius = (at.0.abs_diff(beacon.0) + at.1.abs_diff(beacon.1)) as i32;
+        Self { at, beacon, radius }
     }
 
     fn dist(self, point: (i32, i32)) -> i32 {
@@ -105,23 +102,14 @@ impl Sensor {
     }
 
     fn border_facing(self, point: (i32, i32)) -> impl Iterator<Item = (i32, i32)> {
-        let mut endpoint = self.radius + 1;
-        let (sign0, sign1) = match (self.at.0.cmp(&point.0), self.at.1.cmp(&point.1)) {
-            (Ordering::Less, Ordering::Less) => (1, -1),
-            (Ordering::Less, Ordering::Greater) => (-1, -1),
-            (Ordering::Greater, Ordering::Less) => (1, 1),
-            (Ordering::Greater, Ordering::Greater) => (-1, 1),
-            _ => {
-                endpoint = -1;
-                (1, 1)
-            }
+        let (e, s0, s1) = match (self.at.0.cmp(&point.0), self.at.1.cmp(&point.1)) {
+            (Ordering::Less, Ordering::Less) => (self.radius + 1, 1, -1),
+            (Ordering::Less, Ordering::Greater) => (self.radius + 1, -1, -1),
+            (Ordering::Greater, Ordering::Less) => (self.radius + 1, 1, 1),
+            (Ordering::Greater, Ordering::Greater) => (self.radius + 1, -1, 1),
+            _ => (-1, 1, 1),
         };
-        (0..=endpoint).map(move |r| {
-            (
-                self.at.0 + sign0 * r,
-                self.at.1 + sign1 * (r - self.radius - 1),
-            )
-        })
+        (0..=e).map(move |r| (self.at.0 + s0 * r, self.at.1 + s1 * (r - e)))
     }
 }
 
