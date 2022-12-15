@@ -102,14 +102,19 @@ impl Sensor {
     }
 
     fn border_facing(self, point: (i32, i32)) -> impl Iterator<Item = (i32, i32)> {
-        let (e, s0, s1) = match (self.at.0.cmp(&point.0), self.at.1.cmp(&point.1)) {
-            (Ordering::Less, Ordering::Less) => (self.radius + 1, 1, -1),
-            (Ordering::Less, Ordering::Greater) => (self.radius + 1, -1, -1),
-            (Ordering::Greater, Ordering::Less) => (self.radius + 1, 1, 1),
-            (Ordering::Greater, Ordering::Greater) => (self.radius + 1, -1, 1),
-            _ => (-1, 1, 1),
+        let len = self.radius + 1;
+        let (e, c0, s0, c1, s1) = match (self.at.0.cmp(&point.0), self.at.1.cmp(&point.1)) {
+            (Ordering::Less, Ordering::Less) => (len, 0, 1, len, -1),
+            (Ordering::Less, Ordering::Greater) => (len, 0, -1, len, -1),
+            (Ordering::Greater, Ordering::Less) => (len, 0, 1, -len, 1),
+            (Ordering::Greater, Ordering::Greater) => (len, 0, -1, -len, 1),
+            (Ordering::Equal, Ordering::Less) => (0, 0, 1, -len, 1),
+            (Ordering::Equal, Ordering::Greater) => (0, 0, 1, len, 1),
+            (Ordering::Less, Ordering::Equal) => (0, -len, 1, 0, 1),
+            (Ordering::Greater, Ordering::Equal) => (0, len, 1, 0, 1),
+            (Ordering::Equal, Ordering::Equal) => panic!("no facing"),
         };
-        (0..=e).map(move |r| (self.at.0 + s0 * r, self.at.1 + s1 * (r - e)))
+        (0..=e).map(move |r| (self.at.0 + c0 + s0 * r, self.at.1 + c1 + s1 * r))
     }
 }
 
