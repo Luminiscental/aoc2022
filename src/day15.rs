@@ -3,48 +3,28 @@ use std::collections::HashSet;
 use crate::day::Day;
 
 fn intersect(int1: (i32, i32), int2: (i32, i32)) -> Option<(i32, i32)> {
-    let left = int1.0.max(int2.0);
-    let right = int1.1.min(int2.1);
+    let (left, right) = (int1.0.max(int2.0), int1.1.min(int2.1));
     (left <= right).then_some((left, right))
 }
 
 fn merge(int1: (i32, i32), int2: (i32, i32)) -> Option<(i32, i32)> {
-    if int2.0 - 1 <= int1.1 && int1.1 <= int2.1 {
-        Some((int1.0.min(int2.0), int2.1))
-    } else if int2.0 <= int1.0 && int1.0 <= int2.1 + 1 {
-        Some((int2.0, int1.1.max(int2.1)))
-    } else if int1.0 - 1 <= int2.1 && int2.1 <= int1.1 {
-        Some((int2.0.min(int1.0), int1.1))
-    } else if int1.0 <= int2.0 && int2.0 <= int1.1 + 1 {
-        Some((int1.0, int2.1.max(int1.1)))
-    } else {
-        None
-    }
+    (int1.1 >= int2.0 - 1 && int1.0 <= int2.1 + 1)
+        .then(|| (i32::min(int1.0, int2.0), i32::max(int1.1, int2.1)))
 }
 
-fn combine_intervals(intervals: &mut Vec<(i32, i32)>) {
-    let mut progress = true;
-    while progress {
-        progress = false;
-        'search: for i in 1..intervals.len() {
+fn merge_all(mut intervals: Vec<(i32, i32)>) -> Vec<(i32, i32)> {
+    'merging: loop {
+        for i in 1..intervals.len() {
             for j in 0..i {
                 if let Some(merged) = merge(intervals[i], intervals[j]) {
                     intervals[j] = merged;
                     intervals.swap_remove(i);
-                    progress = true;
-                    break 'search;
+                    continue 'merging;
                 }
             }
         }
+        return intervals;
     }
-}
-
-fn range(sensor: (i32, i32), beacon: (i32, i32), y: i32) -> Option<(i32, i32)> {
-    let dist = sensor.0.abs_diff(beacon.0) + sensor.1.abs_diff(beacon.1);
-    (sensor.1.abs_diff(y) <= dist).then(|| {
-        let radius = dist - sensor.1.abs_diff(y);
-        (sensor.0 - radius as i32, sensor.0 + radius as i32)
-    })
 }
 
 pub struct Day15Generic<const ROW: i32>;
@@ -52,56 +32,68 @@ pub type Day15 = Day15Generic<2000000>;
 
 impl<'a, const ROW: i32> Day<'a> for Day15Generic<ROW> {
     const DAY: usize = 15;
-    type Input = Vec<((i32, i32), (i32, i32))>;
-    type ProcessedInput = Vec<((i32, i32), (i32, i32))>;
+    type Input = Vec<Sensor>;
+    type ProcessedInput = Vec<Sensor>;
 
     fn parse(input: &'a str) -> Self::Input {
+        fn xy(s: &str) -> (i32, i32) {
+            let (x, y) = s.split_once(',').unwrap();
+            (x[2..].parse().unwrap(), y[3..].parse().unwrap())
+        }
         input
             .trim()
             .lines()
             .map(|line| {
                 let (sensor, beacon) = line.split_once(':').unwrap();
-                let (sx, sy) = sensor[10..].split_once(',').unwrap();
-                let (bx, by) = beacon[22..].split_once(',').unwrap();
-                (
-                    (sx[2..].parse().unwrap(), sy[3..].parse().unwrap()),
-                    (bx[2..].parse().unwrap(), by[3..].parse().unwrap()),
-                )
+                Sensor::new(xy(&sensor[10..]), xy(&beacon[22..]))
             })
             .collect()
     }
 
     fn solve_part1(input: Self::Input) -> (Self::ProcessedInput, String) {
-        let mut intervals = input
-            .iter()
-            .filter_map(|&(sensor, beacon)| range(sensor, beacon, ROW))
-            .collect();
-        combine_intervals(&mut intervals);
+        let intervals = merge_all(input.iter().filter_map(|s| s.slice(ROW)).collect());
+        let obstructed = intervals.iter().map(|i| 1 + i.1 - i.0).sum::<i32>();
         let beacons = input
             .iter()
-            .filter_map(|&(_, beacon)| (beacon.1 == ROW).then_some(beacon))
-            .collect::<HashSet<_>>();
-        let obstructed = intervals.into_iter().map(|int| 1 + int.1 - int.0).sum::<i32>();
-        let ans = obstructed - beacons.len() as i32;
-        (input, ans.to_string())
+            .filter_map(|s| (s.beacon.1 == ROW).then_some(s.beacon.0))
+            .collect::<HashSet<_>>()
+            .len();
+        (input, (obstructed - beacons as i32).to_string())
     }
 
     fn solve_part2(input: Self::ProcessedInput) -> String {
-        for y in 0..2 * ROW {
-            let mut intervals = input
-                .iter()
-                .filter_map(|&(sensor, beacon)| range(sensor, beacon, y))
-                .filter_map(|interval| intersect(interval, (0, 2 * ROW)))
-                .collect();
-            combine_intervals(&mut intervals);
+        for y in 0..=2 * ROW {
+            let slice = |s: &Sensor| intersect(s.slice(y)?, (0, 2 * ROW));
+            let intervals = merge_all(input.iter().filter_map(slice).collect());
             if intervals.len() != 1 {
-                intervals.sort_by_key(|int| int.0);
-                assert_eq!(intervals[0].1 + 1, intervals[1].0 - 1);
-                let x = intervals[0].1 + 1;
+                assert_eq!(intervals.len(), 2);
+                let x = i32::min(intervals[0].1, intervals[1].1) + 1;
                 return (4000000 * x as u64 + y as u64).to_string();
             }
         }
         panic!("no gap found")
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Sensor {
+    at: (i32, i32),
+    beacon: (i32, i32),
+    radius: i32,
+}
+
+impl Sensor {
+    fn new(at: (i32, i32), beacon: (i32, i32)) -> Self {
+        Self {
+            at,
+            beacon,
+            radius: (at.0.abs_diff(beacon.0) + at.1.abs_diff(beacon.1)) as i32,
+        }
+    }
+
+    fn slice(self, y: i32) -> Option<(i32, i32)> {
+        let d = self.at.1.abs_diff(y) as i32;
+        (d <= self.radius).then_some((self.at.0 - self.radius + d, self.at.0 + self.radius - d))
     }
 }
 
