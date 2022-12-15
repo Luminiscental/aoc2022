@@ -1,11 +1,7 @@
-use std::collections::HashSet;
+use itertools::Itertools;
+use std::{cmp::Ordering, collections::HashSet};
 
 use crate::day::Day;
-
-fn intersect(int1: (i32, i32), int2: (i32, i32)) -> Option<(i32, i32)> {
-    let (left, right) = (int1.0.max(int2.0), int1.1.min(int2.1));
-    (left <= right).then_some((left, right))
-}
 
 fn merge(int1: (i32, i32), int2: (i32, i32)) -> Option<(i32, i32)> {
     (int1.1 >= int2.0 - 1 && int1.0 <= int2.1 + 1)
@@ -62,16 +58,20 @@ impl<'a, const ROW: i32> Day<'a> for Day15Generic<ROW> {
     }
 
     fn solve_part2(input: Self::ProcessedInput) -> String {
-        for y in 0..=2 * ROW {
-            let slice = |s: &Sensor| intersect(s.slice(y)?, (0, 2 * ROW));
-            let intervals = merge_all(input.iter().filter_map(slice).collect());
-            if intervals.len() != 1 {
-                assert_eq!(intervals.len(), 2);
-                let x = i32::min(intervals[0].1, intervals[1].1) + 1;
-                return (4000000 * x as u64 + y as u64).to_string();
-            }
-        }
-        panic!("no gap found")
+        let (x, y) = input
+            .iter()
+            .tuple_combinations()
+            .find_map(|(s1, s2)| {
+                (s1.dist(s2.at) == s1.radius + s2.radius + 2)
+                    .then(|| {
+                        s1.border_facing(s2.at)
+                            .filter(|&p| p.0 >= 0 && p.1 >= 0 && p.0 <= 2 * ROW && p.1 <= 2 * ROW)
+                            .find(|&p| input.iter().all(|s| !s.sees(p)))
+                    })
+                    .flatten()
+            })
+            .unwrap();
+        (x as u64 * 4000000 + y as u64).to_string()
     }
 }
 
@@ -91,9 +91,37 @@ impl Sensor {
         }
     }
 
+    fn dist(self, point: (i32, i32)) -> i32 {
+        self.at.0.abs_diff(point.0) as i32 + self.at.1.abs_diff(point.1) as i32
+    }
+
+    fn sees(self, point: (i32, i32)) -> bool {
+        self.dist(point) <= self.radius
+    }
+
     fn slice(self, y: i32) -> Option<(i32, i32)> {
         let d = self.at.1.abs_diff(y) as i32;
         (d <= self.radius).then_some((self.at.0 - self.radius + d, self.at.0 + self.radius - d))
+    }
+
+    fn border_facing(self, point: (i32, i32)) -> impl Iterator<Item = (i32, i32)> {
+        let mut endpoint = self.radius + 1;
+        let (sign0, sign1) = match (self.at.0.cmp(&point.0), self.at.1.cmp(&point.1)) {
+            (Ordering::Less, Ordering::Less) => (1, -1),
+            (Ordering::Less, Ordering::Greater) => (-1, -1),
+            (Ordering::Greater, Ordering::Less) => (1, 1),
+            (Ordering::Greater, Ordering::Greater) => (-1, 1),
+            _ => {
+                endpoint = -1;
+                (1, 1)
+            }
+        };
+        (0..=endpoint).map(move |r| {
+            (
+                self.at.0 + sign0 * r,
+                self.at.1 + sign1 * (r - self.radius - 1),
+            )
+        })
     }
 }
 
