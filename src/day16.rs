@@ -1,4 +1,6 @@
-use std::collections::{BinaryHeap, HashMap, VecDeque};
+use std::collections::{HashMap, VecDeque};
+
+use itertools::Itertools;
 
 use crate::day::Day;
 
@@ -26,47 +28,39 @@ fn get_distances(valves: &HashMap<u16, (i32, Vec<u16>)>) -> HashMap<(u16, u16), 
 }
 
 pub struct Volcano {
-    flowing_valves: Vec<(u16, i32)>,
+    valves: Vec<(u16, i32)>,
     distances: HashMap<(u16, u16), i32>,
 }
 
-fn release_with<const N: usize>(time: i32, volcano: &Volcano) -> i32 {
-    let mut queue = BinaryHeap::new();
+fn max_release(time: i32, valves: &[(u16, i32)], distances: &HashMap<(u16, u16), i32>) -> i32 {
+    let mut queue = VecDeque::new();
     let mut seen = HashMap::new();
     let mut best = 0;
-    let aa = encode("AA");
-    queue.push((0, ([aa; N], vec![], [time; N])));
-    seen.insert([aa; N], vec![(0, [time; N])]);
-    // TODO: this condition can actually skip over the optimal route
-    let mut improve_on_seen = |locs: [u16; N], released: i32, times: [i32; N]| -> bool {
-        let seen = seen.entry(locs).or_insert_with(Vec::new);
-        if seen.iter().all(|&(s_released, s_times)| {
-            s_released < released || (0..N).any(|i| s_times[i] < times[i])
+    queue.push_front((0, (encode("AA"), vec![], time)));
+    seen.insert(encode("AA"), vec![(0, vec![], time)]);
+    let mut improve_on_seen = |loc: u16, released: i32, open: Vec<u16>, time: i32| -> bool {
+        let seen = seen.entry(loc).or_insert_with(Vec::new);
+        if seen.iter().all(|(s_released, s_open, s_time)| {
+            *s_released < released || s_open.iter().any(|v| !open.contains(v)) || *s_time < time
         }) {
-            seen.push((released, times));
+            seen.push((released, open, time));
             true
         } else {
             false
         }
     };
-    while let Some((released, (locs, open, times))) = queue.pop() {
+    while let Some((released, (loc, open, time))) = queue.pop_back() {
         best = i32::max(best, released);
-        for (valve, flow) in volcano.flowing_valves.iter().copied() {
+        for (valve, flow) in valves.iter().copied() {
             if open.contains(&valve) {
                 continue;
             }
-            for i in 0..N {
-                let new_t = times[i] - volcano.distances.get(&(locs[i], valve)).unwrap() - 1;
-                let mut new_times = times;
-                new_times[i] = new_t;
-                let mut new_locs = locs;
-                new_locs[i] = valve;
-                let new_r = released + flow * new_t;
-                if new_t > 0 && improve_on_seen(new_locs, new_r, new_times) {
-                    let mut new_open = open.clone();
-                    new_open.push(valve);
-                    queue.push((new_r, (new_locs, new_open, new_times)));
-                }
+            let new_time = time - distances.get(&(loc, valve)).unwrap() - 1;
+            let mut new_open = open.clone();
+            new_open.push(valve);
+            let new_released = released + flow * new_time;
+            if new_time > 0 && improve_on_seen(valve, new_released, new_open.clone(), new_time) {
+                queue.push_front((new_released, (valve, new_open, new_time)));
             }
         }
     }
@@ -98,18 +92,31 @@ impl<'a> Day<'a> for Day16 {
             .filter_map(|(valve, (flow, _))| (flow != 0).then_some((valve, flow)))
             .collect();
         Volcano {
-            flowing_valves,
+            valves: flowing_valves,
             distances,
         }
     }
 
     fn solve_part1(input: Self::Input) -> (Self::ProcessedInput, String) {
-        let ans = release_with::<1>(30, &input).to_string();
+        let ans = max_release(30, &input.valves, &input.distances).to_string();
         (input, ans)
     }
 
     fn solve_part2(input: Self::ProcessedInput) -> String {
-        release_with::<2>(26, &input).to_string()
+        let parts = input
+            .valves
+            .iter()
+            .copied()
+            .powerset()
+            .map(|fv| max_release(26, &fv, &input.distances))
+            .collect_vec();
+        parts
+            .iter()
+            .zip(parts.iter().rev())
+            .map(|(a, b)| a + b)
+            .max()
+            .unwrap()
+            .to_string()
     }
 }
 
@@ -136,7 +143,7 @@ mod test_day16 {
         let input = Day16::parse(EXAMPLE);
         let (input, part1) = Day16::solve_part1(input);
         let part2 = Day16::solve_part2(input);
-        // assert_eq!(part1, "1651");
+        assert_eq!(part1, "1651");
         assert_eq!(part2, "1707");
     }
 }
