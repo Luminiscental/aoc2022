@@ -4,12 +4,9 @@ use itertools::Itertools;
 
 use crate::day::Day;
 
-fn encode(s: &str) -> u16 {
-    assert_eq!(s.len(), 2);
-    u16::from_le_bytes([s.as_bytes()[0], s.as_bytes()[1]])
-}
-
-fn get_distances(valves: &HashMap<u16, (i32, Vec<u16>)>) -> HashMap<(u16, u16), i32> {
+fn get_distances<'a>(
+    valves: &HashMap<&'a str, (i32, Vec<&'a str>)>,
+) -> HashMap<(&'a str, &'a str), i32> {
     let mut distances = HashMap::new();
     for source in valves.keys().copied() {
         let mut queue = VecDeque::new();
@@ -28,20 +25,26 @@ fn get_distances(valves: &HashMap<u16, (i32, Vec<u16>)>) -> HashMap<(u16, u16), 
 }
 
 pub struct Volcano {
-    valves: Vec<(u16, i32)>,
-    distances: HashMap<(u16, u16), i32>,
+    start: u32,
+    valves: Vec<(u32, i32)>,
+    distances: HashMap<(u32, u32), i32>,
 }
 
-fn max_release(time: i32, valves: &[(u16, i32)], distances: &HashMap<(u16, u16), i32>) -> i32 {
+fn max_release(
+    start: u32,
+    time: i32,
+    valves: &[(u32, i32)],
+    distances: &HashMap<(u32, u32), i32>,
+) -> i32 {
     let mut queue = VecDeque::new();
     let mut seen = HashMap::new();
     let mut best = 0;
-    queue.push_front((0, (encode("AA"), vec![], time)));
-    seen.insert(encode("AA"), vec![(0, vec![], time)]);
-    let mut improve_on_seen = |loc: u16, released: i32, open: Vec<u16>, time: i32| -> bool {
+    queue.push_front((0, (start, 0, time)));
+    seen.insert(start, vec![(0, 0, time)]);
+    let mut improve_on_seen = |loc: u32, released: i32, open: u32, time: i32| -> bool {
         let seen = seen.entry(loc).or_insert_with(Vec::new);
         if seen.iter().all(|(s_released, s_open, s_time)| {
-            *s_released < released || s_open.iter().any(|v| !open.contains(v)) || *s_time < time
+            *s_released < released || (s_open & !open) != 0 || *s_time < time
         }) {
             seen.push((released, open, time));
             true
@@ -52,14 +55,14 @@ fn max_release(time: i32, valves: &[(u16, i32)], distances: &HashMap<(u16, u16),
     while let Some((released, (loc, open, time))) = queue.pop_back() {
         best = i32::max(best, released);
         for (valve, flow) in valves.iter().copied() {
-            if open.contains(&valve) {
+            let bit = 1 << valve;
+            if flow == 0 || bit & open != 0 {
                 continue;
             }
             let new_time = time - distances.get(&(loc, valve)).unwrap() - 1;
-            let mut new_open = open.clone();
-            new_open.push(valve);
+            let new_open = open | bit;
             let new_released = released + flow * new_time;
-            if new_time > 0 && improve_on_seen(valve, new_released, new_open.clone(), new_time) {
+            if new_time > 0 && improve_on_seen(valve, new_released, new_open, new_time) {
                 queue.push_front((new_released, (valve, new_open, new_time)));
             }
         }
@@ -82,23 +85,36 @@ impl<'a> Day<'a> for Day16 {
                 let (valve, tunnels) = line.split_once(';').unwrap();
                 let flow = valve[23..].parse().unwrap();
                 let s = tunnels.find(|c: char| c.is_ascii_uppercase()).unwrap();
-                let tunnels = tunnels[s..].split(", ").map(encode).collect();
-                (encode(&valve[6..8]), (flow, tunnels))
+                let tunnels = tunnels[s..].split(", ").collect();
+                (&valve[6..8], (flow, tunnels))
             })
             .collect::<HashMap<_, _>>();
         let distances = get_distances(&graph);
-        let flowing_valves = graph
+        let valves = graph
+            .iter()
+            .filter_map(|(k, v)| (*k == "AA" || v.0 != 0).then_some(*k))
+            .collect_vec();
+        let flag = |valve| valves.iter().position(|&v| v == valve).unwrap() as u32;
+        let distances = distances
             .into_iter()
-            .filter_map(|(valve, (flow, _))| (flow != 0).then_some((valve, flow)))
+            .filter_map(|((k1, k2), d)| {
+                (valves.contains(&k1) && valves.contains(&k2)).then(|| ((flag(k1), flag(k2)), d))
+            })
             .collect();
+        let valves = valves
+            .iter()
+            .map(|valve| (flag(valve), graph.get(valve).unwrap().0))
+            .collect();
+        let start = flag("AA");
         Volcano {
-            valves: flowing_valves,
+            start,
+            valves,
             distances,
         }
     }
 
     fn solve_part1(input: Self::Input) -> (Self::ProcessedInput, String) {
-        let ans = max_release(30, &input.valves, &input.distances).to_string();
+        let ans = max_release(input.start, 30, &input.valves, &input.distances).to_string();
         (input, ans)
     }
 
@@ -108,7 +124,7 @@ impl<'a> Day<'a> for Day16 {
             .iter()
             .copied()
             .powerset()
-            .map(|fv| max_release(26, &fv, &input.distances))
+            .map(|fv| max_release(input.start, 26, &fv, &input.distances))
             .collect_vec();
         parts
             .iter()
