@@ -30,6 +30,14 @@ pub struct Volcano {
     distances: HashMap<(u32, u32), i32>,
 }
 
+fn potential(time: i32, open: u32, valves: &[(u32, i32)]) -> i32 {
+    let release_times = (1..time - 1).rev().step_by(2);
+    let valves = valves
+        .iter()
+        .filter_map(|(v, f)| (open & v == 0).then_some(f));
+    release_times.zip(valves).map(|(t, f)| t * f).sum()
+}
+
 fn max_release(
     start: u32,
     time: i32,
@@ -43,14 +51,14 @@ fn max_release(
     seen.insert(start, vec![(0, 0, time)]);
     let mut improve_on_seen = |loc: u32, released: i32, open: u32, time: i32| -> bool {
         let seen = seen.entry(loc).or_insert_with(Vec::new);
-        if seen.iter().all(|(s_released, s_open, s_time)| {
-            *s_released < released || (s_open & !open) != 0 || *s_time < time
-        }) {
-            seen.push((released, open, time));
-            true
-        } else {
-            false
-        }
+        let max_release = released + potential(time, open, valves);
+        seen.iter()
+            .all(|&(s_released, s_open, s_time)| {
+                s_released < max_release
+                    && (s_released < released || (s_open & !open) != 0 || s_time < time)
+            })
+            .then(|| seen.push((released, open, time)))
+            .is_some()
     };
     while let Some((released, (loc, open, time))) = queue.pop_back() {
         best = i32::max(best, released);
@@ -101,10 +109,11 @@ impl<'a> Day<'a> for Day16 {
                 (valves.contains(&k1) && valves.contains(&k2)).then(|| ((flag(k1), flag(k2)), d))
             })
             .collect();
-        let valves = valves
+        let mut valves = valves
             .iter()
             .map(|valve| (flag(valve), graph.get(valve).unwrap().0))
-            .collect();
+            .collect_vec();
+        valves.sort_by_key(|&(_, f)| -f);
         let start = flag("AA");
         Volcano {
             start,
