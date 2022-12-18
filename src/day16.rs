@@ -135,10 +135,8 @@ impl<'a> Day<'a> for Day16 {
             .powerset()
             .map(|fv| max_release(input.start, 26, &fv, &input.distances))
             .collect_vec();
-        parts
-            .iter()
-            .zip(parts.iter().rev())
-            .map(|(a, b)| a + b)
+        (0..parts.len() / 2)
+            .map(|i| parts[i] + parts[parts.len() - 1 - i])
             .max()
             .unwrap()
             .to_string()
