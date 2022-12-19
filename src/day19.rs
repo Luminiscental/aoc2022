@@ -40,7 +40,7 @@ impl Blueprint {
                     .min(state.time - 1);
                 let max_obsidian = state.resources.2
                     + state.bots.2 * state.time
-                    + max_obsidian_bots * (max_obsidian_bots - 1) / 2;
+                    + max_obsidian_bots * (max_obsidian_bots + 1) / 2;
                 let max_geode_bots = (max_ore / self.geode.0)
                     .min(max_obsidian / self.geode.1)
                     .min(state.time - 1);
