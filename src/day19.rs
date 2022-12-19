@@ -207,8 +207,9 @@ mod test_day19 {
     #[test]
     fn test_day19_examples() {
         let input = Day19::parse(EXAMPLE);
-        let (_, part1) = Day19::solve_part1(input);
+        let (input, part1) = Day19::solve_part1(input);
         assert_eq!(part1, "33");
+        assert_eq!(input[1].max_geodes(32), 62);
     }
 }
 
