@@ -14,6 +14,10 @@ pub struct Blueprint {
 
 impl Blueprint {
     fn max_geodes(&self, time: i32) -> i32 {
+        let ore_cost = (self.ore)
+            .max(self.clay)
+            .max(self.obsidian.0)
+            .max(self.geode.0);
         let mut queue = VecDeque::new();
         let mut seen = HashMap::new();
         let mut best = 0;
@@ -48,7 +52,10 @@ impl Blueprint {
                     + state.bots.3 * state.time
                     + max_geode_bots * (max_geode_bots + 1) / 2;
                 let seen = seen.entry(state.bots).or_insert_with(Vec::new);
-                if best < max_geodes
+                if state.bots.0 <= ore_cost
+                    && state.bots.1 <= self.obsidian.1
+                    && state.bots.2 <= self.geode.1
+                    && best < max_geodes
                     && seen.iter().all(|&(s_resources, s_time)| {
                         s_resources.3 < max_geodes
                             && (s_resources.0 < state.resources.0
@@ -96,7 +103,6 @@ impl State {
                 resources,
                 time,
             });
-            return;
         }
         if self.resources.0 >= bp.obsidian.0 && self.resources.1 >= bp.obsidian.1 {
             let (mut bots, mut resources) = (self.bots, resources);
