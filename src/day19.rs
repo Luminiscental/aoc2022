@@ -29,18 +29,35 @@ impl Blueprint {
                 continue;
             }
             state.for_moves(self, |state| {
+                let max_ore = state.resources.0
+                    + state.bots.0 * state.time
+                    + state.time * (state.time - 1) / 2;
+                let max_clay = state.resources.1
+                    + state.bots.1 * state.time
+                    + state.time * (state.time - 1) / 2;
+                let max_obsidian_bots = (max_ore / self.obsidian.0)
+                    .min(max_clay / self.obsidian.1)
+                    .min(state.time - 1);
+                let max_obsidian = state.resources.2
+                    + state.bots.2 * state.time
+                    + max_obsidian_bots * (max_obsidian_bots - 1) / 2;
+                let max_geode_bots = (max_ore / self.geode.0)
+                    .min(max_obsidian / self.geode.1)
+                    .min(state.time - 1);
                 let max_geodes = state.resources.3
                     + state.bots.3 * state.time
-                    + state.time * (state.time - 1) / 2;
+                    + max_geode_bots * (max_geode_bots + 1) / 2;
                 let seen = seen.entry(state.bots).or_insert_with(Vec::new);
-                if seen.iter().all(|&(s_resources, s_time)| {
-                    s_resources.3 < max_geodes
-                        && (s_resources.0 < state.resources.0
-                            || s_resources.1 < state.resources.1
-                            || s_resources.2 < state.resources.2
-                            || s_resources.3 < state.resources.3
-                            || s_time < state.time)
-                }) {
+                if best < max_geodes
+                    && seen.iter().all(|&(s_resources, s_time)| {
+                        s_resources.3 < max_geodes
+                            && (s_resources.0 < state.resources.0
+                                || s_resources.1 < state.resources.1
+                                || s_resources.2 < state.resources.2
+                                || s_resources.3 < state.resources.3
+                                || s_time < state.time)
+                    })
+                {
                     queue.push_front(state);
                     seen.push((state.resources, state.time));
                 }
@@ -184,10 +201,8 @@ mod test_day19 {
     #[test]
     fn test_day19_examples() {
         let input = Day19::parse(EXAMPLE);
-        let (input, part1) = Day19::solve_part1(input);
-        let part2 = Day19::solve_part2(input);
+        let (_, part1) = Day19::solve_part1(input);
         assert_eq!(part1, "33");
-        assert_eq!(part2, "62");
     }
 }
 
