@@ -62,17 +62,17 @@ impl<'a> Day<'a> for Day20 {
     }
 
     fn solve_part1(input: Self::Input) -> (Self::ProcessedInput, String) {
-        let mut signal = input.clone();
-        signal.mix();
-        (input, signal.score().to_string())
+        let mut file = input.clone();
+        file.mix();
+        (input, file.score().to_string())
     }
 
-    fn solve_part2(mut signal: Self::ProcessedInput) -> String {
-        signal.numbers.iter_mut().for_each(|n| *n *= 811589153);
+    fn solve_part2(mut file: Self::ProcessedInput) -> String {
+        file.numbers.iter_mut().for_each(|n| *n *= 811589153);
         for _ in 0..10 {
-            signal.mix();
+            file.mix();
         }
-        signal.score().to_string()
+        file.score().to_string()
     }
 }
 
