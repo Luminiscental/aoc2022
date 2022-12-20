@@ -3,12 +3,12 @@ use std::iter;
 use crate::day::Day;
 
 #[derive(Clone)]
-pub struct Signal {
+pub struct File {
     numbers: Vec<i64>,
     right: Vec<usize>,
 }
 
-impl Signal {
+impl File {
     fn new(numbers: Vec<i64>) -> Self {
         let right = (1..numbers.len()).chain(iter::once(0)).collect();
         Self { numbers, right }
@@ -48,11 +48,11 @@ pub struct Day20;
 
 impl<'a> Day<'a> for Day20 {
     const DAY: usize = 20;
-    type Input = Signal;
-    type ProcessedInput = Signal;
+    type Input = File;
+    type ProcessedInput = File;
 
     fn parse(input: &'a str) -> Self::Input {
-        Signal::new(
+        File::new(
             input
                 .trim()
                 .lines()
