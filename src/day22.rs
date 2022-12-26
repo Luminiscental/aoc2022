@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
 use hashbrown::{HashMap, HashSet};
+use itertools::iproduct;
 
 use crate::day::Day;
 
@@ -11,6 +12,8 @@ enum Dir {
     Left,
     Right,
 }
+
+const DIRS: [Dir; 4] = [Dir::Up, Dir::Down, Dir::Left, Dir::Right];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum Step {
@@ -129,7 +132,7 @@ fn fold_net(faces: &HashMap<(usize, usize), Vec<bool>>) -> Orientations {
     seen.insert(bottom);
     orientations.insert([0, 0, 1], (bottom, [1, 0, 0], [0, 1, 0]));
     while let Some((tile, (normal, x_axis, y_axis))) = queue.pop_back() {
-        for d in [Dir::Up, Dir::Down, Dir::Left, Dir::Right] {
+        for d in DIRS {
             let nt = d.shift((tile.0 as i32, tile.1 as i32));
             if nt.0 < 0 || nt.1 < 0 {
                 continue;
@@ -157,7 +160,7 @@ fn cube_connections(orientations: &Orientations) -> Connections {
         [0, -1, 0],
     ] {
         let &(tile, x_axis, y_axis) = orientations.get(&normal).unwrap();
-        for dir in [Dir::Up, Dir::Down, Dir::Left, Dir::Right] {
+        for dir in DIRS {
             let (n_normal, n_rel_x_axis, _n_rel_y_axis) = dir.rotate(normal, x_axis, y_axis);
             let &(n_tile, n_x_axis, n_y_axis) = orientations.get(&n_normal).unwrap();
             let dot = |v1: [i32; 3], v2: [i32; 3]| v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
@@ -284,29 +287,17 @@ impl<'a, const N: usize> Day<'a> for Day22Generic<N> {
     }
 
     fn solve_part1(input: Self::Input) -> (Self::ProcessedInput, String) {
-        let wrap = |pos: (i32, i32)| -> (usize, usize) {
-            if pos.0 == -1 {
-                (input.width - 1, pos.1 as usize)
-            } else if pos.1 == -1 {
-                (pos.0 as usize, input.height - 1)
-            } else if pos.0 == input.width as i32 {
-                (0, pos.1 as usize)
-            } else if pos.1 == input.height as i32 {
-                (pos.0 as usize, 0)
-            } else {
-                (pos.0 as usize, pos.1 as usize)
-            }
-        };
-        let mut connections = HashMap::new();
-        for pos in input.faces.keys().copied() {
-            for dir in [Dir::Up, Dir::Down, Dir::Left, Dir::Right] {
+        let (w, h) = (input.width as i32, input.height as i32);
+        let wrap = |pos: (i32, i32)| (pos.0.rem_euclid(w) as usize, pos.1.rem_euclid(h) as usize);
+        let connections = iproduct!(input.faces.keys(), DIRS)
+            .map(|(&pos, dir)| {
                 let mut conn = wrap(dir.shift((pos.0 as i32, pos.1 as i32)));
                 while !input.faces.contains_key(&conn) {
                     conn = wrap(dir.shift((conn.0 as i32, conn.1 as i32)));
                 }
-                connections.insert((pos, dir), (conn, false, dir.opposite()));
-            }
-        }
+                ((pos, dir), (conn, false, dir.opposite()))
+            })
+            .collect();
         let ans = score(&input, &connections, N).to_string();
         (input, ans)
     }
