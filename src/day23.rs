@@ -2,57 +2,49 @@ use hashbrown::{HashMap, HashSet};
 
 use crate::day::Day;
 
-fn round(elves: &mut HashSet<(i32, i32)>, dirs: &mut [(i32, i32)]) -> bool {
+const DIRS: [(i32, i32); 8] = [
+    (-1, -1),
+    (-1, 0),
+    (-1, 1),
+    (0, -1),
+    (0, 1),
+    (1, -1),
+    (1, 0),
+    (1, 1),
+];
+
+const SIDES: [[usize; 3]; 4] = [[0, 3, 5], [2, 4, 7], [0, 1, 2], [5, 6, 7]];
+
+fn round(elves: &mut HashSet<(i32, i32)>, sides: &mut [[usize; 3]; 4]) -> bool {
     let mut propositions = HashMap::new();
-    let mut moved = false;
     for elf in elves.iter().copied() {
-        if [
-            (-1, -1),
-            (-1, 0),
-            (-1, 1),
-            (0, -1),
-            (0, 1),
-            (1, -1),
-            (1, 0),
-            (1, 1),
-        ]
-        .into_iter()
-        .all(|(dx, dy)| !elves.contains(&(elf.0 + dx, elf.1 + dy)))
-        {
+        let mut neighbs = [false; 8];
+        for (n, d) in neighbs.iter_mut().zip(DIRS.iter()) {
+            *n = elves.contains(&(elf.0 + d.0, elf.1 + d.1));
+        }
+        if neighbs == [false; 8] {
             continue;
         }
-        for dir in dirs.iter() {
-            let checks = if dir.0 == 0 {
-                [
-                    (elf.0 - 1, elf.1 + dir.1),
-                    (elf.0, elf.1 + dir.1),
-                    (elf.0 + 1, elf.1 + dir.1),
-                ]
-            } else {
-                [
-                    (elf.0 + dir.0, elf.1 - 1),
-                    (elf.0 + dir.0, elf.1),
-                    (elf.0 + dir.0, elf.1 + 1),
-                ]
-            };
-            if checks.iter().all(|p| !elves.contains(p)) {
+        for [i, j, k] in sides.iter().copied() {
+            if !neighbs[i] && !neighbs[j] && !neighbs[k] {
+                let target = (elf.0 + DIRS[j].0, elf.1 + DIRS[j].1);
                 propositions
-                    .entry(checks[1])
-                    .or_insert_with(Vec::new)
-                    .push(elf);
+                    .entry(target)
+                    .and_modify(|e| *e = None)
+                    .or_insert(Some(elf));
                 break;
             }
         }
     }
-    propositions.retain(|_, from| from.len() == 1);
-    propositions.iter().for_each(|(_, from)| {
-        moved = true;
-        elves.remove(&from[0]);
-    });
-    propositions.drain().for_each(|(to, _)| {
-        elves.insert(to);
-    });
-    dirs.rotate_left(1);
+    propositions.retain(|_, p| p.is_some());
+    let moved = !propositions.is_empty();
+    for (_, p) in propositions.iter() {
+        elves.remove(&p.unwrap());
+    }
+    for (t, _) in propositions.drain() {
+        elves.insert(t);
+    }
+    sides.rotate_left(1);
     moved
 }
 
@@ -77,9 +69,9 @@ impl<'a> Day<'a> for Day23 {
 
     fn solve_part1(input: Self::Input) -> (Self::ProcessedInput, String) {
         let mut elves = input.clone();
-        let mut dirs = [(0, -1), (0, 1), (-1, 0), (1, 0)];
+        let mut sides = SIDES;
         for _ in 0..10 {
-            round(&mut elves, &mut dirs);
+            round(&mut elves, &mut sides);
         }
         let elf = *elves.iter().next().unwrap();
         let (mut min, mut max) = (elf, elf);
@@ -94,9 +86,9 @@ impl<'a> Day<'a> for Day23 {
     }
 
     fn solve_part2(mut elves: Self::ProcessedInput) -> String {
-        let mut dirs = [(0, -1), (0, 1), (-1, 0), (1, 0)];
+        let mut sides = SIDES;
         (1..)
-            .find(|_| !round(&mut elves, &mut dirs))
+            .find(|_| !round(&mut elves, &mut sides))
             .unwrap()
             .to_string()
     }
