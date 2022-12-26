@@ -1,44 +1,34 @@
-use std::iter;
-
 use crate::day::Day;
 
 #[derive(Clone)]
 pub struct File {
     numbers: Vec<i64>,
-    right: Vec<usize>,
+    indices: Vec<usize>,
 }
 
 impl File {
     fn new(numbers: Vec<i64>) -> Self {
-        let right = (1..numbers.len()).chain(iter::once(0)).collect();
-        Self { numbers, right }
+        let indices = (0..numbers.len()).collect();
+        Self { numbers, indices }
     }
 
     fn mix(&mut self) {
-        for (i, n) in self.numbers.iter().enumerate() {
-            let moves = n.rem_euclid(self.numbers.len() as i64 - 1);
-            let mut left = self.right.iter().position(|&idx| idx == i).unwrap();
-            for _ in 0..moves {
-                let next = (self.right[i], self.right[self.right[i]]);
-                self.right[left] = next.0;
-                self.right[i] = next.1;
-                self.right[next.0] = i;
-                left = next.0;
-            }
+        let wrap = |n: i64| n.rem_euclid(self.numbers.len() as i64 - 1);
+        for (i, n) in self.numbers.iter().copied().enumerate() {
+            let j = self.indices.iter().position(|&idx| idx == i).unwrap();
+            self.indices.remove(j);
+            self.indices.insert(wrap(j as i64 + n) as usize, i);
         }
     }
 
     fn score(&self) -> i64 {
         let zero = self.numbers.iter().position(|&n| n == 0).unwrap();
+        let zero = self.indices.iter().position(|&idx| idx == zero).unwrap();
         [1000, 2000, 3000]
             .into_iter()
             .map(|c: usize| {
-                let moves = c.rem_euclid(self.numbers.len());
-                let mut i = zero;
-                for _ in 0..moves {
-                    i = self.right[i];
-                }
-                self.numbers[i]
+                let moves = (zero + c).rem_euclid(self.numbers.len());
+                self.numbers[self.indices[moves]]
             })
             .sum()
     }
