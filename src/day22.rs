@@ -119,7 +119,7 @@ impl Dir {
 }
 
 fn fold_net(faces: &HashMap<(usize, usize), Vec<bool>>) -> Orientations {
-    let bottom = faces.keys().copied().min().unwrap();
+    let bottom = faces.keys().copied().next().unwrap();
     let mut queue = VecDeque::new();
     let mut seen = HashSet::new();
     let mut orientations = HashMap::new();
