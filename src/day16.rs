@@ -1,5 +1,6 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 
+use hashbrown::HashMap;
 use itertools::Itertools;
 
 use crate::day::Day;

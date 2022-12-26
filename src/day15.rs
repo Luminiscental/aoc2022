@@ -1,5 +1,7 @@
+use std::cmp::Ordering;
+
+use hashbrown::HashSet;
 use itertools::Itertools;
-use std::{cmp::Ordering, collections::HashSet};
 
 use crate::day::Day;
 

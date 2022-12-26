@@ -1,5 +1,6 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::VecDeque;
 
+use hashbrown::HashSet;
 use itertools::Itertools;
 
 use crate::day::Day;
