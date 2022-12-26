@@ -27,7 +27,7 @@ impl Blueprint {
             resources: (0, 0, 0, 0),
             time,
         });
-        seen.insert((1, 0, 0, 0), vec![((0, 0, 0, 0), time)]);
+        seen.insert(((1, 0, 0, 0), time), (0, 0, 0, 0));
         while let Some(state) = queue.pop_back() {
             best = i32::max(best, state.resources.3);
             if state.time == 0 {
@@ -52,22 +52,22 @@ impl Blueprint {
                 let max_geodes = state.resources.3
                     + state.bots.3 * state.time
                     + max_geode_bots * (max_geode_bots + 1) / 2;
-                let seen = seen.entry(state.bots).or_insert_with(Vec::new);
+                let seen = seen.entry((state.bots, state.time)).or_insert((0, 0, 0, 0));
                 if state.bots.0 <= ore_cost
                     && state.bots.1 <= self.obsidian.1
                     && state.bots.2 <= self.geode.1
                     && best < max_geodes
-                    && seen.iter().all(|&(s_resources, s_time)| {
-                        s_resources.3 < max_geodes
-                            && (s_resources.0 < state.resources.0
-                                || s_resources.1 < state.resources.1
-                                || s_resources.2 < state.resources.2
-                                || s_resources.3 < state.resources.3
-                                || s_time < state.time)
-                    })
+                    && seen.3 < max_geodes
+                    && (seen.0 < state.resources.0
+                        || seen.1 < state.resources.1
+                        || seen.2 < state.resources.2
+                        || seen.3 < state.resources.3)
                 {
                     queue.push_front(state);
-                    seen.push((state.resources, state.time));
+                    seen.0 = i32::max(seen.0, state.resources.0);
+                    seen.1 = i32::max(seen.1, state.resources.1);
+                    seen.2 = i32::max(seen.2, state.resources.2);
+                    seen.3 = i32::max(seen.3, state.resources.3);
                 }
             });
         }
