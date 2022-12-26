@@ -9,12 +9,14 @@ fn get_distances<'a>(
     valves: &HashMap<&'a str, (i32, Vec<&'a str>)>,
 ) -> HashMap<(&'a str, &'a str), i32> {
     let mut distances = HashMap::new();
-    for source in valves.keys().copied() {
+    for (&source, &(source_flow, _)) in valves.iter() {
         let mut queue = VecDeque::new();
         queue.push_front((source, 0));
         distances.insert((source, source), 0);
         while let Some((target, dist)) = queue.pop_back() {
-            for neighb in valves.get(&target).unwrap().1.iter().copied() {
+            let (target_flow, neighbs) = valves.get(&target).unwrap();
+            assert!(dist != 1 || source_flow == 0 || *target_flow == 0);
+            for neighb in neighbs.iter().copied() {
                 distances.entry((source, neighb)).or_insert_with(|| {
                     queue.push_front((neighb, dist + 1));
                     dist + 1
@@ -32,7 +34,7 @@ pub struct Volcano {
 }
 
 fn potential(time: i32, open: u32, valves: &[(u32, i32)]) -> i32 {
-    let release_times = (1..time - 1).rev().step_by(2);
+    let release_times = (1..time - 1).rev().step_by(3);
     let valves = valves
         .iter()
         .filter_map(|(v, f)| (open & v == 0).then_some(f));
