@@ -179,7 +179,7 @@ fn cube_connections(orientations: &Orientations) -> Connections {
     connections
 }
 
-fn score<const N: usize>(input: &Input, connections: &Connections) -> i32 {
+fn score(input: &Input, connections: &Connections, dim: usize) -> i32 {
     let mut tile = (input.start, 0);
     let mut pos = (0, 0);
     let mut facing = Dir::Right;
@@ -193,20 +193,20 @@ fn score<const N: usize>(input: &Input, connections: &Connections) -> i32 {
                         Some(Dir::Left)
                     } else if next.1 == -1 {
                         Some(Dir::Up)
-                    } else if next.0 == N as i32 {
+                    } else if next.0 == dim as i32 {
                         Some(Dir::Right)
-                    } else if next.1 == N as i32 {
+                    } else if next.1 == dim as i32 {
                         Some(Dir::Down)
                     } else {
                         None
                     };
                     let (new_tile, new_facing, new_pos) = if let Some(dir) = cross {
                         let (conn, sign, at) = *connections.get(&(tile, dir)).unwrap();
-                        (conn, at.opposite(), dir.wrap(at, sign, pos, N))
+                        (conn, at.opposite(), dir.wrap(at, sign, pos, dim))
                     } else {
                         (tile, facing, (next.0 as usize, next.1 as usize))
                     };
-                    if !input.faces.get(&new_tile).unwrap()[new_pos.0 + new_pos.1 * N] {
+                    if !input.faces.get(&new_tile).unwrap()[new_pos.0 + new_pos.1 * dim] {
                         tile = new_tile;
                         pos = new_pos;
                         facing = new_facing;
@@ -217,7 +217,9 @@ fn score<const N: usize>(input: &Input, connections: &Connections) -> i32 {
             }
         }
     }
-    1000 * (tile.1 * N + pos.1 + 1) as i32 + 4 * (tile.0 * N + pos.0 + 1) as i32 + facing.score()
+    1000 * (tile.1 * dim + pos.1 + 1) as i32
+        + 4 * (tile.0 * dim + pos.0 + 1) as i32
+        + facing.score()
 }
 
 pub struct Day22Generic<const N: usize>;
@@ -303,14 +305,14 @@ impl<'a, const N: usize> Day<'a> for Day22Generic<N> {
                 connections.insert((pos, dir), (conn, false, dir.opposite()));
             }
         }
-        let ans = score::<N>(&input, &connections).to_string();
+        let ans = score(&input, &connections, N).to_string();
         (input, ans)
     }
 
     fn solve_part2(input: Self::ProcessedInput) -> String {
         let orientations = fold_net(&input.faces);
         let connections = cube_connections(&orientations);
-        score::<N>(&input, &connections).to_string()
+        score(&input, &connections, N).to_string()
     }
 }
 
